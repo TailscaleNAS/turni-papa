@@ -1,0 +1,19 @@
+{
+  "rules": {
+    "shifts": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('roles').child(auth.uid).val() === 'editor'"
+    },
+    "roles": {
+      ".read": "auth != null",
+      ".write": false
+    },
+    "fcmTokens": {
+      ".read": false,
+      "$uid": {
+        ".read":  "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    }
+  }
+}
