@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<meta name="theme-color" content="#0f0f13"/>
+<title>I miei turni</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { background: #0f0f13; min-height: 100vh; font-family: 'DM Sans', sans-serif; }
+  .phone { width: 100%; max-width: 430px; margin: 0 auto; min-height: 100vh; background: #0f0f13; position: relative; padding-bottom: 40px; }
+  .status-bar { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px 0; font-size: 12px; color: #888; }
+  .version-tag { font-size: 10px; background: #FFB830; color: #0f0f13; padding: 2px 8px; border-radius: 20px; font-weight: 700; }
+  .header { padding: 18px 24px 12px; }
+  .header h1 { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; color: #fff; margin-bottom: 2px; letter-spacing: -0.5px; }
+  .header p { font-size: 13px; color: #888; }
+  .month-nav { display: flex; align-items: center; justify-content: space-between; padding: 8px 24px 14px; }
+  .month-nav span { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; color: #fff; }
+  .nav-btn { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #2a2a35; background: #1a1a22; color: #aaa; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+  .nav-btn:active { background: #252530; }
+  .today-btn { display: none; padding: 5px 14px; border-radius: 20px; border: 1px solid #2a2a35; background: #1a1a22; color: #aaa; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; }
+  .today-btn.visible { display: block; }
+  .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); padding: 0 12px; gap: 5px; margin-bottom: 6px; }
+  .weekday { text-align: center; font-size: 11px; font-weight: 500; color: #555; padding: 4px 0; text-transform: uppercase; letter-spacing: 0.5px; }
+  .weekday.weekend { color: #E24B4A; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; padding: 0 12px; transition: all 0.3s; }
+  .cal-grid.zoom { grid-template-columns: repeat(4, 1fr); }
+
+  .day-cell { border-radius: 12px; min-height: 100px; padding: 8px 3px 7px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; background: #1a1a22; border: 1px solid #252530; transition: transform 0.1s; user-select: none; overflow: hidden; }
+  .cal-grid.zoom .day-cell { min-height: 120px; border-radius: 16px; padding: 10px 4px 9px; }
+  .day-cell:active { transform: scale(0.94); }
+  .day-cell.empty { background: transparent; border-color: transparent; cursor: default; pointer-events: none; }
+  .day-cell.multi-selected { border-color: #FFB830 !important; background: #2e2510; }
+  .day-cell.multi-selected .day-num { color: #FFB830; }
+
+  .day-num { font-size: 24px; font-weight: 700; color: #ccc; line-height: 1; font-family: 'Syne', sans-serif; }
+  .cal-grid.zoom .day-num { font-size: 32px; }
+
+  .day-cell.today .day-num { background: #fff; color: #0f0f13; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .cal-grid.zoom .day-cell.today .day-num { width: 48px; height: 48px; font-size: 28px; }
+
+  .shifts-wrap { display: flex; flex-direction: column; gap: 3px; width: 100%; align-items: center; }
+  .shift-badge { width: 88%; border-radius: 6px; padding: 3px 0; text-align: center; font-size: 13px; font-weight: 800; font-family: 'Syne', sans-serif; line-height: 1.3; }
+  .cal-grid.zoom .shift-badge { font-size: 17px; padding: 4px 0; border-radius: 8px; }
+
+  .zoom-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #2a2a35; background: #1a1a22; color: #aaa; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 700; }
+  .zoom-btn.active { border-color: #FFB830; color: #FFB830; background: #2e2510; }
+  .multi-bar { display: none; align-items: center; justify-content: space-between; padding: 10px 14px; background: #1a1a22; border: 1px solid #2e2510; border-radius: 14px; margin: 10px 12px 0; }
+  .multi-bar.visible { display: flex; }
+  .multi-bar-text { font-size: 13px; color: #FFB830; font-weight: 500; }
+  .multi-bar-btns { display: flex; gap: 8px; }
+  .multi-assign-btn { padding: 7px 14px; border-radius: 10px; border: none; background: #FFB830; color: #0f0f13; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .multi-cancel-btn { padding: 7px 14px; border-radius: 10px; border: 1px solid #2a2a35; background: transparent; color: #888; font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; }
+  .divider { height: 1px; background: #1e1e28; margin: 12px 24px 0; }
+  .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; padding: 14px 24px 10px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #777; }
+  .legend-dot { width: 22px; height: 5px; border-radius: 3px; flex-shrink: 0; }
+  .legend-code { font-size: 10px; font-weight: 700; font-family: 'Syne', sans-serif; min-width: 28px; }
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 10; }
+  .overlay.open { display: block; }
+  .sheet { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; background: #17171f; border-radius: 24px 24px 0 0; padding: 16px 20px 40px; z-index: 11; animation: slideUp 0.28s cubic-bezier(0.32,0.72,0,1); }
+  @keyframes slideUp { from { transform: translateX(-50%) translateY(100%); } to { transform: translateX(-50%) translateY(0); } }
+  .sheet-handle { width: 36px; height: 4px; background: #333; border-radius: 2px; margin: 0 auto 14px; }
+  .sheet-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+  .sheet-title { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+  .sheet-sub { font-size: 12px; color: #666; margin-bottom: 8px; }
+  .close-btn { background: none; border: none; color: #555; font-size: 20px; cursor: pointer; padding: 0 0 0 12px; line-height: 1; }
+  .dual-hint { font-size: 11px; color: #555; margin-bottom: 10px; }
+  .dual-hint span { color: #FFB830; }
+  .shift-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .shift-btn { border-radius: 12px; padding: 10px; border: 1.5px solid transparent; cursor: pointer; display: flex; align-items: center; gap: 8px; background: #1e1e28; transition: all 0.15s; text-align: left; }
+  .shift-btn:active { opacity: 0.8; }
+  .s-code { font-size: 17px; font-weight: 800; font-family: 'Syne', sans-serif; min-width: 28px; }
+  .s-name { font-size: 12px; font-weight: 500; display: block; }
+  .s-time { font-size: 10px; color: #555; display: block; }
+  .save-btn { width: 100%; padding: 14px; border-radius: 14px; border: none; background: #fff; color: #0f0f13; font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .save-btn:active { background: #ddd; }
+  .save-btn:disabled { background: #2a2a35; color: #555; cursor: default; }
+  .clear-btn { width: 100%; padding: 10px; border-radius: 14px; border: 1px solid #2a2a35; background: transparent; color: #666; font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; margin-top: 8px; }
+  .clear-btn:active { background: #1a1a22; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="status-bar">
+    <span id="clock">--:--</span>
+    <span class="version-tag">BETA</span>
+  </div>
+  <div class="header">
+    <h1>I miei turni</h1>
+    <p>Tocca un giorno · tieni premuto per più giorni</p>
+  </div>
+  <div class="month-nav">
+    <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
+    <span id="month-label"></span>
+    <button class="today-btn" id="today-btn" onclick="goToday()">Oggi</button>
+    <button class="zoom-btn" id="zoom-btn" onclick="toggleZoom()" title="Ingrandisci">⊕</button>
+    <button class="nav-btn" onclick="changeMonth(1)">›</button>
+  </div>
+  <div class="weekdays" id="weekdays-bar">
+    <div class="weekday">Lun</div><div class="weekday">Mar</div><div class="weekday">Mer</div>
+    <div class="weekday">Gio</div><div class="weekday">Ven</div>
+    <div class="weekday weekend">Sab</div><div class="weekday weekend">Dom</div>
+  </div>
+  <div class="cal-grid" id="cal-grid"></div>
+  <div class="multi-bar" id="multi-bar">
+    <span class="multi-bar-text" id="multi-bar-text">0 giorni selezionati</span>
+    <div class="multi-bar-btns">
+      <button class="multi-cancel-btn" onclick="cancelMulti()">Annulla</button>
+      <button class="multi-assign-btn" onclick="openMultiSheet()">Assegna turno</button>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="legend" id="legend"></div>
+</div>
+
+<div class="overlay" id="overlay" onclick="closeSheet()"></div>
+
+<div class="sheet" id="sheet" style="display:none">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div><div class="sheet-title" id="sheet-title"></div></div>
+    <button class="close-btn" onclick="closeSheet()">×</button>
+  </div>
+  <div class="sheet-sub" id="sheet-sub"></div>
+  <div class="dual-hint" id="dual-hint">Puoi selezionare fino a <span>2 turni</span> per questo giorno</div>
+  <div class="shift-options" id="shift-options"></div>
+  <button class="save-btn" id="save-btn" onclick="saveShift()" disabled>Salva turno</button>
+  <button class="clear-btn" id="clear-btn" onclick="clearShift()">Rimuovi turno</button>
+</div>
+
+<script>
+const SHIFTS = [
+  { id:'1',   color:'#4FC3F7', bg:'#0d2535', name:'Primo',     sub:'Mattino · 06:00–14:00' },
+  { id:'2',   color:'#1D9E75', bg:'#0a2218', name:'Secondo',   sub:'Pomeriggio · 14:00–22:00' },
+  { id:'3',   color:'#FFD600', bg:'#2e2a00', name:'Notte',     sub:'22:00–06:00' },
+  { id:'R',   color:'#E24B4A', bg:'#2a0d0d', name:'Riposo',    sub:'Giorno libero' },
+  { id:'PAR', color:'#D4537E', bg:'#2a0e1a', name:'Permesso',  sub:'Permesso annuale' },
+  { id:'FER', color:'#C0392B', bg:'#2d0b09', name:'Ferie',     sub:'Ferie' },
+  { id:'F',   color:'#D85A30', bg:'#2a1508', name:'Festivo',   sub:'Giorno festivo' },
+  { id:'M',   color:'#8B5E3C', bg:'#2a1a0d', name:'Malattia',  sub:'Malattia o Infortunio' },
+  { id:'104', color:'#9C6FE4', bg:'#1e1430', name:'Legge 104', sub:'Permesso L.104' },
+];
+const SHIFT_MAP = Object.fromEntries(SHIFTS.map(s => [s.id, s]));
+const MONTHS = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+const DAYS   = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
+
+const today = new Date();
+let curYear = today.getFullYear(), curMonth = today.getMonth();
+let selDay = null, selShifts = [];
+let multiMode = false, multiSelected = new Set(), longPressTimer = null;
+
+function storageKey(y,m){ return `turni_${y}_${m}`; }
+function loadShifts(y,m){ return JSON.parse(localStorage.getItem(storageKey(y,m))||'{}'); }
+function saveShiftsStorage(y,m,data){ localStorage.setItem(storageKey(y,m),JSON.stringify(data)); }
+
+let zoomMode = false;
+
+function toggleZoom(){
+  zoomMode = !zoomMode;
+  const grid = document.getElementById('cal-grid');
+  const wdays = document.getElementById('weekdays-bar');
+  const btn = document.getElementById('zoom-btn');
+  grid.classList.toggle('zoom', zoomMode);
+  btn.classList.toggle('active', zoomMode);
+  btn.textContent = zoomMode ? '⊖' : '⊕';
+  if(zoomMode){
+    wdays.style.gridTemplateColumns = 'repeat(4,1fr)';
+    wdays.innerHTML = '<div class="weekday" style="grid-column:1/5;text-align:center;color:#555;font-size:10px">Vista ingrandita — 4 giorni per riga</div>';
+  } else {
+    wdays.style.gridTemplateColumns = 'repeat(7,1fr)';
+    wdays.innerHTML = '<div class="weekday">Lun</div><div class="weekday">Mar</div><div class="weekday">Mer</div><div class="weekday">Gio</div><div class="weekday">Ven</div><div class="weekday weekend">Sab</div><div class="weekday weekend">Dom</div>';
+  }
+}
+
+function goToday(){ curYear=today.getFullYear(); curMonth=today.getMonth(); cancelMulti(); renderCal(); }
+
+function changeMonth(dir){
+  curMonth+=dir;
+  if(curMonth<0){curMonth=11;curYear--;} if(curMonth>11){curMonth=0;curYear++;}
+  cancelMulti(); selDay=null; renderCal();
+}
+
+function getShiftArr(raw){ return raw ? (Array.isArray(raw)?raw:[raw]) : []; }
+
+function renderCal(){
+  const shifts = loadShifts(curYear,curMonth);
+  document.getElementById('month-label').textContent = MONTHS[curMonth]+' '+curYear;
+  const isThisMonth = today.getMonth()===curMonth && today.getFullYear()===curYear;
+  document.getElementById('today-btn').classList.toggle('visible',!isThisMonth);
+
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+  const firstDow = new Date(curYear,curMonth,1).getDay();
+  const offset   = firstDow===0?6:firstDow-1;
+  const dim      = new Date(curYear,curMonth+1,0).getDate();
+
+  for(let i=0;i<offset;i++){const e=document.createElement('div');e.className='day-cell empty';grid.appendChild(e);}
+
+  for(let d=1;d<=dim;d++){
+    const cell    = document.createElement('div');
+    const isToday = isThisMonth && d===today.getDate();
+    const isMulti = multiSelected.has(d);
+    cell.className = 'day-cell'+(isToday?' today':'')+(isMulti?' multi-selected':'');
+
+    const numEl = document.createElement('div');
+    numEl.className='day-num'; numEl.textContent=d; cell.appendChild(numEl);
+
+    const dayShifts = getShiftArr(shifts[d]);
+    if(dayShifts.length>0){
+      const wrap=document.createElement('div'); wrap.className='shifts-wrap';
+      dayShifts.forEach(sid=>{
+        const sh=SHIFT_MAP[sid]; if(!sh) return;
+        const badge=document.createElement('div'); badge.className='shift-badge';
+        badge.style.background=sh.bg; badge.style.color=sh.color;
+        badge.style.border=`1px solid ${sh.color}55`;
+        badge.textContent=sh.id; wrap.appendChild(badge);
+      });
+      cell.appendChild(wrap);
+    }
+
+    cell.addEventListener('pointerdown',()=>{ longPressTimer=setTimeout(()=>{longPressTimer=null;enterMultiMode(d);},500); });
+    cell.addEventListener('pointerup',()=>clearTimeout(longPressTimer));
+    cell.addEventListener('pointercancel',()=>clearTimeout(longPressTimer));
+    cell.onclick=()=>{
+      if(longPressTimer===null&&!multiMode) return;
+      if(multiMode) toggleMultiDay(d); else openDay(d);
+    };
+    grid.appendChild(cell);
+  }
+
+  const bar=document.getElementById('multi-bar'), txt=document.getElementById('multi-bar-text');
+  if(multiMode&&multiSelected.size>0){
+    bar.classList.add('visible');
+    txt.textContent=multiSelected.size+(multiSelected.size===1?' giorno selezionato':' giorni selezionati');
+  } else bar.classList.remove('visible');
+}
+
+function renderLegend(){
+  const leg=document.getElementById('legend'); leg.innerHTML='';
+  SHIFTS.forEach(s=>{
+    const item=document.createElement('div'); item.className='legend-item';
+    item.innerHTML=`<div class="legend-dot" style="background:${s.color}"></div><span class="legend-code" style="color:${s.color}">${s.id}</span><span>${s.name}</span>`;
+    leg.appendChild(item);
+  });
+}
+
+function enterMultiMode(d){ multiMode=true; multiSelected=new Set([d]); renderCal(); }
+function toggleMultiDay(d){
+  if(multiSelected.has(d)){multiSelected.delete(d);if(multiSelected.size===0){cancelMulti();return;}}
+  else multiSelected.add(d); renderCal();
+}
+function cancelMulti(){ multiMode=false; multiSelected=new Set(); renderCal(); }
+
+function openMultiSheet(){
+  selShifts=[];
+  const c=multiSelected.size;
+  document.getElementById('sheet-title').textContent=c+(c===1?' giorno selezionato':' giorni selezionati');
+  document.getElementById('sheet-sub').textContent='Scegli il turno da assegnare a tutti';
+  document.getElementById('dual-hint').style.display='none';
+  document.getElementById('clear-btn').style.display='none';
+  renderShiftButtons(); showSheet();
+}
+
+function openDay(d){
+  selDay=d;
+  const shifts=loadShifts(curYear,curMonth);
+  selShifts=[...getShiftArr(shifts[d])];
+  const dow=new Date(curYear,curMonth,d).getDay(); const di=dow===0?6:dow-1;
+  document.getElementById('sheet-title').textContent=DAYS[di]+' '+d+' '+MONTHS[curMonth];
+  updateSheetSub();
+  document.getElementById('dual-hint').style.display='block';
+  document.getElementById('clear-btn').style.display=selShifts.length>0?'block':'none';
+  renderShiftButtons(); renderCal(); showSheet();
+}
+
+function updateSheetSub(){
+  document.getElementById('sheet-sub').textContent = selShifts.length>0
+    ? 'Turni: '+selShifts.map(s=>SHIFT_MAP[s]?.name).join(' + ')
+    : 'Nessun turno selezionato';
+}
+
+function showSheet(){
+  document.getElementById('overlay').classList.add('open');
+  const s=document.getElementById('sheet');
+  s.style.display='block'; s.style.animation='none'; s.offsetHeight; s.style.animation='';
+}
+
+function renderShiftButtons(){
+  const container=document.getElementById('shift-options'); container.innerHTML='';
+  SHIFTS.forEach(s=>{
+    const idx=selShifts.indexOf(s.id);
+    const isActive=idx>=0;
+    const btn=document.createElement('button');
+    btn.className='shift-btn';
+    if(isActive){ btn.style.borderColor=s.color; btn.style.background=s.bg; if(idx===1) btn.style.opacity='0.7'; }
+    btn.innerHTML=`<span class="s-code" style="color:${s.color}">${s.id}</span><span><span class="s-name" style="color:${s.color}">${s.name}</span><span class="s-time">${s.sub}</span></span>`;
+    btn.onclick=()=>{
+      if(selShifts.includes(s.id)) selShifts=selShifts.filter(x=>x!==s.id);
+      else if(selShifts.length<2) selShifts.push(s.id);
+      else selShifts=[selShifts[1],s.id];
+      document.getElementById('save-btn').disabled=selShifts.length===0;
+      updateSheetSub(); renderShiftButtons();
+    };
+    container.appendChild(btn);
+  });
+  document.getElementById('save-btn').disabled=selShifts.length===0;
+}
+
+function saveShift(){
+  if(selShifts.length===0) return;
+  const shifts=loadShifts(curYear,curMonth);
+  const val=selShifts.length===1?selShifts[0]:selShifts;
+  if(multiMode&&multiSelected.size>0){
+    multiSelected.forEach(d=>{shifts[d]=val;});
+    saveShiftsStorage(curYear,curMonth,shifts); closeSheet(); cancelMulti();
+  } else {
+    if(!selDay) return;
+    shifts[selDay]=val; saveShiftsStorage(curYear,curMonth,shifts); closeSheet();
+  }
+  renderCal();
+}
+
+function clearShift(){
+  if(!selDay) return;
+  const shifts=loadShifts(curYear,curMonth);
+  delete shifts[selDay]; saveShiftsStorage(curYear,curMonth,shifts);
+  selShifts=[]; closeSheet(); renderCal();
+}
+
+function closeSheet(){
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('sheet').style.display='none';
+  selDay=null; if(!multiMode) renderCal();
+}
+
+function updateClock(){
+  const n=new Date();
+  document.getElementById('clock').textContent=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');
+}
+
+renderLegend(); renderCal(); updateClock();
+setInterval(updateClock,10000);
+</script>
+</body>
+</html>
